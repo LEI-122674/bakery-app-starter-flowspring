@@ -1,4 +1,4 @@
-package com.vaadin.starter.bakery.backend.data;
+package com.vaadin.starter.bakery.backend.data; 
 
 import java.util.LinkedHashMap;
 import java.util.List;
