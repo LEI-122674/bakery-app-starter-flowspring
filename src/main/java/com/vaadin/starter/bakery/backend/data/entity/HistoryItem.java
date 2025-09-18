@@ -69,7 +69,7 @@ public class HistoryItem extends AbstractEntity {
 	 * Should not be used directly in application code.
 	 * </p>
 	 */
-	HistoryItem() {
+	protected HistoryItem() {
 		// Empty constructor is needed by Spring Data / JPA
 	}
 
