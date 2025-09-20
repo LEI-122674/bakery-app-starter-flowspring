@@ -29,20 +29,44 @@ import com.vaadin.starter.bakery.backend.data.entity.Product;
 import com.vaadin.starter.bakery.backend.data.entity.User;
 import com.vaadin.starter.bakery.backend.repositories.OrderRepository;
 
+/**
+ * Service class for managing {@link Order} entities.
+ * <p>
+ * Provides operations for creating, updating, searching, and aggregating
+ * order data. Also produces {@link DeliveryStats} and {@link DashboardData}
+ * for reporting and dashboards.
+ * </p>
+ */
 @Service
 public class OrderService implements CrudService<Order> {
 
 	private final OrderRepository orderRepository;
 
+	/**
+	 * Creates a new {@code OrderService} with the given repository.
+	 *
+	 * @param orderRepository the repository used for accessing order data
+	 */
 	@Autowired
 	public OrderService(OrderRepository orderRepository) {
 		super();
 		this.orderRepository = orderRepository;
 	}
 
+	/**
+	 * Set of states where orders are not available.
+	 */
 	private static final Set<OrderState> notAvailableStates = Collections.unmodifiableSet(
 			EnumSet.complementOf(EnumSet.of(OrderState.DELIVERED, OrderState.READY, OrderState.CANCELLED)));
 
+	/**
+	 * Saves an order, either creating a new one or updating an existing one.
+	 *
+	 * @param currentUser the user performing the action
+	 * @param id          the ID of the order to update, or {@code null} to create new
+	 * @param orderFiller a consumer to populate the order fields
+	 * @return the saved order
+	 */
 	@Transactional(rollbackOn = Exception.class)
 	public Order saveOrder(User currentUser, Long id, BiConsumer<User, Order> orderFiller) {
 		Order order;
@@ -55,19 +79,42 @@ public class OrderService implements CrudService<Order> {
 		return orderRepository.save(order);
 	}
 
+	/**
+	 * Saves the given order directly.
+	 *
+	 * @param order the order to save
+	 * @return the saved order
+	 */
 	@Transactional(rollbackOn = Exception.class)
 	public Order saveOrder(Order order) {
 		return orderRepository.save(order);
 	}
 
+	/**
+	 * Adds a comment to the given order and saves it.
+	 *
+	 * @param currentUser the user adding the comment
+	 * @param order       the order to update
+	 * @param comment     the comment to add
+	 * @return the updated order
+	 */
 	@Transactional(rollbackOn = Exception.class)
 	public Order addComment(User currentUser, Order order, String comment) {
 		order.addHistoryItem(currentUser, comment);
 		return orderRepository.save(order);
 	}
 
+	/**
+	 * Finds orders matching a filter and/or after a given due date.
+	 *
+	 * @param optionalFilter     optional name filter
+	 * @param optionalFilterDate optional due date filter
+	 * @param pageable           paging information
+	 * @return a page of matching orders
+	 */
 	public Page<Order> findAnyMatchingAfterDueDate(Optional<String> optionalFilter,
-			Optional<LocalDate> optionalFilterDate, Pageable pageable) {
+												   Optional<LocalDate> optionalFilterDate,
+												   Pageable pageable) {
 		if (optionalFilter.isPresent() && !optionalFilter.get().isEmpty()) {
 			if (optionalFilterDate.isPresent()) {
 				return orderRepository.findByCustomerFullNameContainingIgnoreCaseAndDueDateAfter(
@@ -83,16 +130,29 @@ public class OrderService implements CrudService<Order> {
 			}
 		}
 	}
-	
+
+	/**
+	 * Finds all orders due today or later.
+	 *
+	 * @return list of matching order summaries
+	 */
 	@Transactional
 	public List<OrderSummary> findAnyMatchingStartingToday() {
 		return orderRepository.findByDueDateGreaterThanEqual(LocalDate.now());
 	}
 
-	public long countAnyMatchingAfterDueDate(Optional<String> optionalFilter, Optional<LocalDate> optionalFilterDate) {
+	/**
+	 * Counts the number of orders matching optional filters.
+	 *
+	 * @param optionalFilter     optional name filter
+	 * @param optionalFilterDate optional due date filter
+	 * @return the number of matching orders
+	 */
+	public long countAnyMatchingAfterDueDate(Optional<String> optionalFilter,
+											 Optional<LocalDate> optionalFilterDate) {
 		if (optionalFilter.isPresent() && optionalFilterDate.isPresent()) {
-			return orderRepository.countByCustomerFullNameContainingIgnoreCaseAndDueDateAfter(optionalFilter.get(),
-					optionalFilterDate.get());
+			return orderRepository.countByCustomerFullNameContainingIgnoreCaseAndDueDateAfter(
+					optionalFilter.get(), optionalFilterDate.get());
 		} else if (optionalFilter.isPresent()) {
 			return orderRepository.countByCustomerFullNameContainingIgnoreCase(optionalFilter.get());
 		} else if (optionalFilterDate.isPresent()) {
@@ -102,6 +162,11 @@ public class OrderService implements CrudService<Order> {
 		}
 	}
 
+	/**
+	 * Collects delivery statistics for today and upcoming orders.
+	 *
+	 * @return delivery statistics
+	 */
 	private DeliveryStats getDeliveryStats() {
 		DeliveryStats stats = new DeliveryStats();
 		LocalDate today = LocalDate.now();
@@ -109,13 +174,18 @@ public class OrderService implements CrudService<Order> {
 		stats.setDueTomorrow((int) orderRepository.countByDueDate(today.plusDays(1)));
 		stats.setDeliveredToday((int) orderRepository.countByDueDateAndStateIn(today,
 				Collections.singleton(OrderState.DELIVERED)));
-
 		stats.setNotAvailableToday((int) orderRepository.countByDueDateAndStateIn(today, notAvailableStates));
 		stats.setNewOrders((int) orderRepository.countByState(OrderState.NEW));
-
 		return stats;
 	}
 
+	/**
+	 * Collects dashboard data for a given month and year.
+	 *
+	 * @param month the month (1–12)
+	 * @param year  the year
+	 * @return dashboard data
+	 */
 	public DashboardData getDashboardData(int month, int year) {
 		DashboardData data = new DashboardData();
 		data.setDeliveryStats(getDeliveryStats());
@@ -127,7 +197,6 @@ public class OrderService implements CrudService<Order> {
 		List<Object[]> sales = orderRepository.sumPerMonthLastThreeYears(OrderState.DELIVERED, year);
 
 		for (Object[] salesData : sales) {
-			// year, month, deliveries
 			int y = year - (int) salesData[0];
 			int m = (int) salesData[1] - 1;
 			if (y == 0 && m == month - 1) {
@@ -149,16 +218,36 @@ public class OrderService implements CrudService<Order> {
 		return data;
 	}
 
+	/**
+	 * Returns daily deliveries for a given month and year.
+	 *
+	 * @param month the month (1–12)
+	 * @param year  the year
+	 * @return list of deliveries per day (null if no data for that day)
+	 */
 	private List<Number> getDeliveriesPerDay(int month, int year) {
 		int daysInMonth = YearMonth.of(year, month).lengthOfMonth();
 		return flattenAndReplaceMissingWithNull(daysInMonth,
 				orderRepository.countPerDay(OrderState.DELIVERED, year, month));
 	}
 
+	/**
+	 * Returns monthly deliveries for a given year.
+	 *
+	 * @param year the year
+	 * @return list of deliveries per month (null if no data for that month)
+	 */
 	private List<Number> getDeliveriesPerMonth(int year) {
 		return flattenAndReplaceMissingWithNull(12, orderRepository.countPerMonth(OrderState.DELIVERED, year));
 	}
 
+	/**
+	 * Helper method to fill a list with counts, replacing missing values with null.
+	 *
+	 * @param length expected number of elements
+	 * @param list   query result list with [index, value]
+	 * @return list of numbers with missing values replaced by null
+	 */
 	private List<Number> flattenAndReplaceMissingWithNull(int length, List<Object[]> list) {
 		List<Number> counts = new ArrayList<>();
 		for (int i = 0; i < length; i++) {
@@ -171,11 +260,22 @@ public class OrderService implements CrudService<Order> {
 		return counts;
 	}
 
+	/**
+	 * Returns the JPA repository backing this service.
+	 *
+	 * @return the order repository
+	 */
 	@Override
 	public JpaRepository<Order, Long> getRepository() {
 		return orderRepository;
 	}
 
+	/**
+	 * Creates a new order with default due time and date.
+	 *
+	 * @param currentUser the user creating the order
+	 * @return a new order instance
+	 */
 	@Override
 	@Transactional
 	public Order createNew(User currentUser) {
@@ -184,5 +284,4 @@ public class OrderService implements CrudService<Order> {
 		order.setDueDate(LocalDate.now());
 		return order;
 	}
-
 }
