@@ -45,6 +45,7 @@ import org.springframework.security.web.authentication.logout.SecurityContextLog
  * (Storefront, Dashboard, Users, Products) and handles logout actions.
  * It also manages a global {@link ConfirmDialog} for views that implement {@link HasConfirmation}.
  */
+
 public class MainView extends AppLayout {
 
 	/**
@@ -224,3 +225,5 @@ public class MainView extends AppLayout {
 		return a;
 	}
 }
+
+
