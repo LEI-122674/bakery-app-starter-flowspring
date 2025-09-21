@@ -47,6 +47,24 @@ import com.vaadin.starter.bakery.ui.utils.FormattingUtils;
 import com.vaadin.starter.bakery.ui.views.storefront.OrderCard;
 import com.vaadin.starter.bakery.ui.views.storefront.beans.OrdersCountDataWithChart;
 
+/**
+ * Vista principal do dashboard da aplicação Bakery.
+ *
+ * <p>
+ * Mostra estatísticas de encomendas, entregas, vendas e produtos através de
+ * gráficos e contadores. Inclui também uma grelha de encomendas recentes.
+ * </p>
+ *
+ * <p>
+ * A vista é construída a partir de {@link LitTemplate} e usa componentes Vaadin
+ * como {@link Chart} e {@link Grid} para representar visualmente os dados.
+ * </p>
+ *
+ * <p>
+ * Os dados são obtidos a partir do {@link OrderService}, que fornece
+ * instâncias de {@link DashboardData} e {@link DeliveryStats}.
+ * </p>
+ */
 @Tag("dashboard-view")
 @JsModule("./src/views/dashboard/dashboard-view.js")
 @Route(value = BakeryConst.PAGE_DASHBOARD, layout = MainView.class)
@@ -54,6 +72,9 @@ import com.vaadin.starter.bakery.ui.views.storefront.beans.OrdersCountDataWithCh
 @PermitAll
 public class DashboardView extends LitTemplate {
 
+	/**
+	 * Abreviaturas para os meses usadas nos gráficos anuais.
+	 */
 	private static final String[] MONTH_LABELS = new String[] {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul",
 			"Aug", "Sep", "Oct", "Nov", "Dec"};
 
@@ -89,6 +110,18 @@ public class DashboardView extends LitTemplate {
 	@Id("todayCountChart")
 	private Chart todayCountChart;
 
+	/**
+	 * Construtor do dashboard.
+	 *
+	 * <p>
+	 * Configura a grelha de encomendas, carrega os dados através do
+	 * {@link OrderService}, popula os gráficos e contadores e inicia a medição
+	 * de performance do carregamento da página.
+	 * </p>
+	 *
+	 * @param orderService       serviço para acesso a encomendas e dados de estatísticas
+	 * @param orderDataProvider  fornecedor de dados para a grelha de encomendas
+	 */
 	@Autowired
 	public DashboardView(OrderService orderService, OrdersGridDataProvider orderDataProvider) {
 		this.orderService = orderService;
@@ -111,8 +144,16 @@ public class DashboardView extends LitTemplate {
 		measurePageLoadPerformance();
 	}
 
-	// This method is overridden to measure the page load performance and can be safely removed
-	// if there is no need for that.
+	/**
+	 * Mede o tempo de carregamento da página através da contagem de gráficos
+	 * carregados. Quando todos os gráficos estiverem prontos executa um JS que
+	 * sinaliza a conclusão.
+	 *
+	 * <p>
+	 * Este método é útil para monitorização e pode ser removido se não for
+	 * necessário.
+	 * </p>
+	 */
 	private void measurePageLoadPerformance() {
 		final int nTotal = 5; // the total number of charts on the page
 		AtomicInteger nLoaded = new AtomicInteger();
@@ -130,6 +171,11 @@ public class DashboardView extends LitTemplate {
 		monthlyProductSplit.addChartLoadListener(chartLoadListener);
 	}
 
+	/**
+	 * Inicializa o gráfico de divisão mensal de produtos entregues.
+	 *
+	 * @param productDeliveries mapa com produtos e respetivas quantidades entregues
+	 */
 	private void initProductSplitMonthlyGraph(Map<Product, Integer> productDeliveries) {
 
 		LocalDate today = LocalDate.now();
@@ -148,6 +194,11 @@ public class DashboardView extends LitTemplate {
 		conf.addSeries(deliveriesPerProductSeries);
 	}
 
+	/**
+	 * Popula os contadores de encomendas (hoje, indisponíveis, novas e amanhã).
+	 *
+	 * @param deliveryStats estatísticas de entrega
+	 */
 	private void populateOrdersCounts(DeliveryStats deliveryStats) {
 		List<OrderSummary> orders = orderService.findAnyMatchingStartingToday();
 
@@ -161,7 +212,11 @@ public class DashboardView extends LitTemplate {
 		tomorrowCount.setOrdersCountData(DashboardUtils.getTomorrowOrdersCountData(deliveryStats, orders.iterator()));
 	}
 
-
+	/**
+	 * Inicializa o gráfico do tipo Solid Gauge para o contador de hoje.
+	 *
+	 * @param data dados de contagem de encomendas de hoje (com informação "overall")
+	 */
 	private void initTodayCountSolidgaugeChart(OrdersCountDataWithChart data) {
 		Configuration configuration = todayCountChart.getConfiguration();
 		configuration.getChart().setType(ChartType.SOLIDGAUGE);
@@ -194,6 +249,11 @@ public class DashboardView extends LitTemplate {
 		pane.setBackground(background);
 	}
 
+	/**
+	 * Popula os gráficos de entregas do ano e do mês atual.
+	 *
+	 * @param data dados consolidados do dashboard
+	 */
 	private void populateDeliveriesCharts(DashboardData data) {
 		LocalDate today = LocalDate.now();
 
@@ -219,6 +279,11 @@ public class DashboardView extends LitTemplate {
 		monthConf.addSeries(new ListSeries("per Day", deliveriesThisMonth));
 	}
 
+	/**
+	 * Configura opções padrão para gráficos do tipo coluna.
+	 *
+	 * @param conf configuração do gráfico
+	 */
 	private void configureColumnChart(Configuration conf) {
 		conf.getChart().setType(ChartType.COLUMN);
 		conf.getChart().setBorderRadius(4);
@@ -233,6 +298,11 @@ public class DashboardView extends LitTemplate {
 		conf.getLegend().setEnabled(false);
 	}
 
+	/**
+	 * Preenche o gráfico de vendas anuais (últimos 3 anos).
+	 *
+	 * @param data dados consolidados do dashboard
+	 */
 	private void populateYearlySalesChart(DashboardData data) {
 		Configuration conf = yearlySalesGraph.getConfiguration();
 		conf.getChart().setType(ChartType.AREASPLINE);
