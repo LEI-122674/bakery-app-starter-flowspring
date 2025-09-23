@@ -3,9 +3,22 @@ package com.vaadin.starter.bakery.ui.events;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.ComponentEvent;
 
+/**
+ * Event that is fired when a cancel action occurs in a UI component.
+ * <p>
+ * This event extends {@link ComponentEvent} and can be used to listen
+ * for user-initiated or programmatic cancel actions.
+ * </p>
+ */
 public class CancelEvent extends ComponentEvent<Component> {
 
-	public CancelEvent(Component source, boolean fromClient) {
-		super(source, fromClient);
-	}
+    /**
+     * Creates a new {@code CancelEvent}.
+     *
+     * @param source     the component that fired the event
+     * @param fromClient {@code true} if the event originated from the client-side, {@code false} if from the server-side
+     */
+    public CancelEvent(Component source, boolean fromClient) {
+        super(source, fromClient);
+    }
 }
