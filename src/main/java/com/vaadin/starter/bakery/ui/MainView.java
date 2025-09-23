@@ -38,14 +38,39 @@ import com.vaadin.starter.bakery.ui.views.storefront.StorefrontView;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
 
+/**
+ * The main application layout for the Bakery App.
+ * <p>
+ * This class provides a navigation menu with tabs for different views
+ * (Storefront, Dashboard, Users, Products) and handles logout actions.
+ * It also manages a global {@link ConfirmDialog} for views that implement {@link HasConfirmation}.
+ */
+
 public class MainView extends AppLayout {
 
+	/**
+	 * Used to check access permissions for views based on Spring Security annotations.
+	 */
 	@Autowired
 	private AccessAnnotationChecker accessChecker;
+
+	/**
+	 * A global confirm dialog shared with views that require confirmation.
+	 */
 	private final ConfirmDialog confirmDialog = new ConfirmDialog();
+
+	/**
+	 * The main navigation menu containing tabs.
+	 */
 	private Tabs menu;
+
 	private static final String LOGOUT_SUCCESS_URL = "/" + BakeryConst.PAGE_ROOT;
 
+	/**
+	 * Initializes the main view after all dependencies are injected.
+	 * <p>
+	 * Sets up the confirm dialog, navigation menu, app name, and logout handling.
+	 */
 	@PostConstruct
 	public void init() {
 		confirmDialog.setCancelable(true);
@@ -58,19 +83,20 @@ public class MainView extends AppLayout {
 
 		menu = createMenuTabs();
 
-		// Handle logout
+		// Handle logout action
 		menu.addSelectedChangeListener(e -> {
 			if (e.getSelectedTab() == null) {
 				return;
 			}
-			
+
 			e.getSelectedTab().getId().ifPresent(id -> {
 				if ("logout-tab".equals(id)) {
 					UI.getCurrent().getPage().setLocation(LOGOUT_SUCCESS_URL);
 					SecurityContextLogoutHandler logoutHandler = new SecurityContextLogoutHandler();
 					logoutHandler.logout(
-						VaadinServletRequest.getCurrent().getHttpServletRequest(), null,
-					null);
+							VaadinServletRequest.getCurrent().getHttpServletRequest(), null,
+							null
+					);
 				}
 			});
 		});
@@ -79,15 +105,17 @@ public class MainView extends AppLayout {
 		this.addToNavbar(true, menu);
 		this.getElement().appendChild(confirmDialog.getElement());
 
-		getElement().addEventListener("search-focus", e -> {
-			getElement().getClassList().add("hide-navbar");
-		});
-
-		getElement().addEventListener("search-blur", e -> {
-			getElement().getClassList().remove("hide-navbar");
-		});
+		// Hide navbar on search focus
+		getElement().addEventListener("search-focus", e -> getElement().getClassList().add("hide-navbar"));
+		getElement().addEventListener("search-blur", e -> getElement().getClassList().remove("hide-navbar"));
 	}
 
+	/**
+	 * Called after navigation occurs.
+	 * <p>
+	 * Updates the selected tab in the menu to match the current view,
+	 * and assigns the confirm dialog to views implementing {@link HasConfirmation}.
+	 */
 	@Override
 	protected void afterNavigation() {
 		super.afterNavigation();
@@ -95,6 +123,7 @@ public class MainView extends AppLayout {
 		if (getContent() instanceof HasConfirmation) {
 			((HasConfirmation) getContent()).setConfirmDialog(confirmDialog);
 		}
+
 		RouteConfiguration configuration = RouteConfiguration.forSessionScope();
 		if (configuration.isRouteRegistered(this.getContent().getClass())) {
 			String target = configuration.getUrl(this.getContent().getClass());
@@ -108,6 +137,11 @@ public class MainView extends AppLayout {
 		}
 	}
 
+	/**
+	 * Creates the main menu tabs for navigation.
+	 *
+	 * @return the {@link Tabs} component containing all menu tabs
+	 */
 	private Tabs createMenuTabs() {
 		final Tabs tabs = new Tabs();
 		tabs.setOrientation(Tabs.Orientation.HORIZONTAL);
@@ -115,6 +149,11 @@ public class MainView extends AppLayout {
 		return tabs;
 	}
 
+	/**
+	 * Generates the available tabs for the main menu based on access permissions.
+	 *
+	 * @return an array of {@link Tab} components
+	 */
 	private Tab[] getAvailableTabs() {
 		final List<Tab> tabs = new ArrayList<>(4);
 		tabs.add(createTab(VaadinIcon.EDIT, TITLE_STOREFRONT, StorefrontView.class));
@@ -127,17 +166,33 @@ public class MainView extends AppLayout {
 				VaadinServletRequest.getCurrent().getHttpServletRequest())) {
 			tabs.add(createTab(VaadinIcon.CALENDAR, TITLE_PRODUCTS, ProductsView.class));
 		}
+
 		final String contextPath = VaadinServlet.getCurrent().getServletContext().getContextPath();
 		final Tab logoutTab = createTab(createLogoutLink(contextPath));
 		logoutTab.setId("logout-tab");
 		tabs.add(logoutTab);
+
 		return tabs.toArray(new Tab[tabs.size()]);
 	}
 
+	/**
+	 * Creates a {@link Tab} with the given icon, title, and navigation target.
+	 *
+	 * @param icon the icon for the tab
+	 * @param title the display title
+	 * @param viewClass the target view class
+	 * @return a configured {@link Tab} component
+	 */
 	private static Tab createTab(VaadinIcon icon, String title, Class<? extends Component> viewClass) {
 		return createTab(populateLink(new RouterLink("", viewClass), icon, title));
 	}
 
+	/**
+	 * Wraps a {@link Component} in a {@link Tab}.
+	 *
+	 * @param content the component to include inside the tab
+	 * @return the configured {@link Tab}
+	 */
 	private static Tab createTab(Component content) {
 		final Tab tab = new Tab();
 		tab.addThemeVariants(TabVariant.LUMO_ICON_ON_TOP);
@@ -145,14 +200,30 @@ public class MainView extends AppLayout {
 		return tab;
 	}
 
+	/**
+	 * Creates a logout link for the main menu.
+	 *
+	 * @param contextPath the servlet context path
+	 * @return an {@link Anchor} representing the logout link
+	 */
 	private static Anchor createLogoutLink(String contextPath) {
-		final Anchor a = populateLink(new Anchor(), VaadinIcon.ARROW_RIGHT, TITLE_LOGOUT);
-		return a;
+		return populateLink(new Anchor(), VaadinIcon.ARROW_RIGHT, TITLE_LOGOUT);
 	}
 
+	/**
+	 * Populates a component with an icon and title.
+	 *
+	 * @param a the component to populate (e.g., {@link Anchor} or {@link RouterLink})
+	 * @param icon the icon to display
+	 * @param title the title text
+	 * @param <T> the component type
+	 * @return the populated component
+	 */
 	private static <T extends HasComponents> T populateLink(T a, VaadinIcon icon, String title) {
 		a.add(icon.create());
 		a.add(title);
 		return a;
 	}
 }
+
+
