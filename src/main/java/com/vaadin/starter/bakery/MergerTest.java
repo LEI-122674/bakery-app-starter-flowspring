@@ -7,6 +7,11 @@ package com.vaadin.starter.bakery;
 
 public class MergerTest {
 
+    public static double getPriceWithDiscount(double n, int percentage){
+        return n*percentage/100;
+    }
+
+
     public static String getMyLastName(String name){
         String[] names = name.split(" ");
         return names[names.length-1];
@@ -17,6 +22,7 @@ public class MergerTest {
         System.out.println("Hello World");
         String fullName = "Bianca Sofia Pestana Correia";
         System.out.println(getMyLastName(fullName));
+        System.out.println(getPriceWithDiscount(54,10));
     }
 
 }
